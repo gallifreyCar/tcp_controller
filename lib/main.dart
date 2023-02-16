@@ -138,7 +138,7 @@ class _MyHomePageState extends State<MyHomePage> {
               x = (move.x * 100).toInt();
               y = (move.y * 100).toInt();
               setState(() {
-                sendData = "X: $x\nY: $y";
+                sendData = "X: $x,Y: $y\r";
               });
               // print(sendData);
               if (isConnected) {
