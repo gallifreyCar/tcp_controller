@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_joystick/flutter_joystick.dart';
 
 void main() {
@@ -19,6 +20,7 @@ class MyApp extends StatelessWidget {
       title: 'Flutter Demo',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
+        useMaterial3: true,
         primarySwatch: Colors.blue,
       ),
       home: const MyHomePage(),
@@ -37,18 +39,12 @@ class _MyHomePageState extends State<MyHomePage> {
   //是否建立起连接
   bool isConnected = false;
 
-  //是否可以发送信息
-  bool isCanSend = true;
-
   //socket
   late Socket socket;
 
   //接收到的信息
   String receivedData = '无响应';
   static const defaultSendData = '你好，世界';
-
-  //要发送的信息
-  String sendData = defaultSendData;
 
   //主机地址和端口
   static const defaultHost = '192.168.0.251';
@@ -66,14 +62,53 @@ class _MyHomePageState extends State<MyHomePage> {
   int illumination = 0;
   int waterLevelSafety = 1;
   int illuminationSafety = 1;
+  late Ticker ticker;
+  double timeAccumulator = 0.0;
+  var lastElapsed = Duration.zero;
+  static const maxSendingInterval = 1000.0;
+  var sendingInterval = 200.0;
+
+  double get sendingIntervalProgress => sendingInterval / maxSendingInterval;
+
+  set sendingIntervalProgress(double progress) => sendingInterval = progress * maxSendingInterval;
+
+  List<String> sendingQueue = [];
+
+  @override
+  void initState() {
+    super.initState();
+    ticker = Ticker((elapsed) {
+      timeAccumulator += (elapsed.inMilliseconds - lastElapsed.inMilliseconds).toDouble();
+      if (timeAccumulator >= sendingInterval) {
+        if (sendingQueue.isNotEmpty) {
+          final data = sendingQueue.last;
+          sendingQueue.clear();
+          if (isConnected) {
+            sendToPeer(data);
+          }
+          setState(() {});
+        }
+        // do something
+        timeAccumulator = 0;
+      }
+      lastElapsed = elapsed;
+      // print(elapsed);
+    });
+    ticker.start();
+  }
+
+  @override
+  void dispose() {
+    ticker.dispose();
+    super.dispose();
+  }
 
   //发送信息到另一端服务器
-  Future<void> sendToPeer() async {
-    isCanSend = false;
-    socket.write(sendData);
+  Future<void> sendToPeer(String data) async {
+    socket.write(data);
+    debugPrint(data);
 
     await socket.flush().onError((error, stackTrace) => {debugPrint(error.toString())});
-    isCanSend = true;
   }
 
   //监听数据流
@@ -115,7 +150,23 @@ class _MyHomePageState extends State<MyHomePage> {
     return Scaffold(
       resizeToAvoidBottomInset: false,
       appBar: AppBar(
-        title: const Text("基于tcp的控制器"),
+        title: const Text("TCP控制器"),
+        actions: [
+          Slider(
+            inactiveColor: Colors.white70,
+            activeColor: Colors.greenAccent,
+            value: sendingIntervalProgress,
+            max: 1,
+            min: 0,
+            divisions: 100,
+            label: sendingInterval.toInt().toString(),
+            onChanged: (double value) {
+              setState(() {
+                sendingIntervalProgress = value;
+              });
+            },
+          )
+        ],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -135,15 +186,19 @@ class _MyHomePageState extends State<MyHomePage> {
             stick: const MyJoystickStick(),
             base: const JoystickBase(),
             listener: (move) {
-              x = (move.x * 100).toInt();
-              y = (move.y * 100).toInt();
-              setState(() {
-                sendData = "X: $x,Y: $y\r";
-              });
-              // print(sendData);
-              if (isConnected) {
-                sendToPeer();
+              if (!isConnected) {
+                return;
               }
+              y = (move.x * 100).toInt();
+              x = (move.y * 100).toInt();
+              final data = "X: $x,Y: $y\r\n";
+              if (x == 0 && y == 0) {
+                sendingQueue.clear();
+                sendToPeer(data);
+              } else {
+                sendingQueue.add(data);
+              }
+              debugPrint("$timeAccumulator");
             },
             mode: JoystickMode.all,
           ),
@@ -225,7 +280,7 @@ class _MyHomePageState extends State<MyHomePage> {
       ],
     );
   }
-
+/*
   //测试用的自由发送信息模块（保留
   Widget _buildTestContent() {
     return Column(children: [
@@ -243,7 +298,7 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
       ElevatedButton(onPressed: isConnected && isCanSend ? sendToPeer : null, child: const Text("发送信息")),
     ]);
-  }
+  }*/
 }
 
 //摇杆样式
