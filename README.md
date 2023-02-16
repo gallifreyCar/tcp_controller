@@ -15,5 +15,8 @@ For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
 
-## test
+## Test
 可以参照test包里面的python基本进行基于socket的tcp连接进行测试
+
+## Think
+感谢[Liplum](https://github.com/liplum)提供的帮助
