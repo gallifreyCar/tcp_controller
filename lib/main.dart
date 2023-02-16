@@ -80,15 +80,20 @@ class _MyHomePageState extends State<MyHomePage> {
     ticker = Ticker((elapsed) {
       timeAccumulator += (elapsed.inMilliseconds - lastElapsed.inMilliseconds).toDouble();
       if (timeAccumulator >= sendingInterval) {
-        if (sendingQueue.isNotEmpty) {
-          final data = sendingQueue.last;
+        if ((x * 100).toInt() == 0 && (y * 100).toInt() == 0) {
           sendingQueue.clear();
-          if (isConnected) {
-            sendToPeer(data);
+          final data = makeData(0, 0);
+          sendToPeer(data);
+        } else {
+          if (sendingQueue.isNotEmpty) {
+            final data = sendingQueue.last;
+            sendingQueue.clear();
+            if (isConnected) {
+              sendToPeer(data);
+            }
           }
-          setState(() {});
         }
-        // do something
+        setState(() {});
         timeAccumulator = 0;
       }
       lastElapsed = elapsed;
@@ -153,8 +158,6 @@ class _MyHomePageState extends State<MyHomePage> {
         title: const Text("TCP控制器"),
         actions: [
           Slider(
-            inactiveColor: Colors.white70,
-            activeColor: Colors.greenAccent,
             value: sendingIntervalProgress,
             max: 1,
             min: 0,
@@ -191,7 +194,7 @@ class _MyHomePageState extends State<MyHomePage> {
               }
               y = (move.x * 100).toInt();
               x = (move.y * 100).toInt();
-              final data = "X: $x,Y: $y\r\n";
+              final data = makeData(x, y);
               if (x == 0 && y == 0) {
                 sendingQueue.clear();
                 sendToPeer(data);
@@ -209,6 +212,10 @@ class _MyHomePageState extends State<MyHomePage> {
         ],
       ),
     );
+  }
+
+  String makeData(int x, int y) {
+    return "X: $x,Y: $y\r\n";
   }
 
   //输入框ui
