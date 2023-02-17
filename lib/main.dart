@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_joystick/flutter_joystick.dart';
+import 'package:syncfusion_flutter_sliders/sliders.dart';
 
 void main() {
   runApp(const MyApp());
@@ -67,11 +68,14 @@ class _MyHomePageState extends State<MyHomePage> {
   int waterLevelSafety = 1;
   int illuminationSafety = 1;
 
-  //发送信息到另一端服务器
-  Future<void> sendToPeer() async {
-    isCanSend = false;
-    socket.write(sendData);
+  //rangeSliver的默认值
+  SfRangeValues _lightValues = const SfRangeValues(30.0, 60.0);
+  SfRangeValues _waterValues = const SfRangeValues(60.0, 90.0);
 
+  //发送信息到另一端服务器
+  Future<void> sendToPeer(String data) async {
+    isCanSend = false;
+    socket.write(data);
     await socket.flush().onError((error, stackTrace) => {debugPrint(error.toString())});
     isCanSend = true;
   }
@@ -84,10 +88,12 @@ class _MyHomePageState extends State<MyHomePage> {
 
       setState(() {
         receivedData = data;
-        illumination = int.parse(receivedData.split(',')[0]);
-        waterLevel = int.parse(receivedData.split(',')[1]);
-        illuminationSafety = int.parse(receivedData.split(',')[2]);
-        waterLevelSafety = int.parse(receivedData.split(',')[3]);
+        if (receivedData != '无响应') {
+          illumination = int.parse(receivedData.split(',')[0]);
+          waterLevel = int.parse(receivedData.split(',')[1]);
+          illuminationSafety = int.parse(receivedData.split(',')[2]);
+          waterLevelSafety = int.parse(receivedData.split(',')[3]);
+        }
       });
     });
   }
@@ -115,21 +121,40 @@ class _MyHomePageState extends State<MyHomePage> {
     return Scaffold(
       resizeToAvoidBottomInset: false,
       appBar: AppBar(
-        title: const Text("基于tcp的控制器"),
+        title: const Text("TCP控制器"),
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const SizedBox(height: 20),
           _buildInputField(),
-          const SizedBox(height: 20),
+          const SizedBox(height: 10),
           ElevatedButton(
               onPressed: !isConnected ? tcpConnect : tcpCloseConnect,
               child: !isConnected ? const Text('建立连接') : const Text('断开连接')),
-          const SizedBox(height: 40),
-          _buildTextRow("光照：", Icons.sunny, Colors.orange, illumination, ' lux'),
-          const SizedBox(height: 5),
-          _buildTextRow("水位：", Icons.water_sharp, Colors.blueAccent, waterLevel, ' m'),
+          const SizedBox(height: 10),
+          _buildRougeSliver(const Icon(Icons.sunny, color: Colors.orange), 'light'),
+          // const SizedBox(height: 5),
+          _buildRougeSliver(const Icon(Icons.water_sharp, color: Colors.blueAccent), 'water'),
+          const SizedBox(height: 30),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildTextRow("光照：", Icons.sunny, Colors.orange, illumination, ' lux'),
+              const SizedBox(width: 25),
+              _buildTextRow("水位：", Icons.water_sharp, Colors.blueAccent, waterLevel, ' m'),
+            ],
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton.icon(
+            onPressed: isConnected && isCanSend
+                ? () {
+                    sendToPeer('F\r\n');
+                  }
+                : null,
+            label: const Text("灭火"),
+            icon: const Icon(Icons.fire_extinguisher),
+          ),
+
           const SizedBox(height: 20),
           Joystick(
             stick: const MyJoystickStick(),
@@ -138,21 +163,55 @@ class _MyHomePageState extends State<MyHomePage> {
               x = (move.x * 100).toInt();
               y = (move.y * 100).toInt();
               setState(() {
-                sendData = "X: $x,Y: $y\r";
+                sendData = "X: $x,Y: $y\r\n";
               });
               // print(sendData);
               if (isConnected) {
-                sendToPeer();
+                sendToPeer(sendData);
               }
             },
             mode: JoystickMode.all,
           ),
-          const SizedBox(height: 50),
+          const SizedBox(height: 30),
           _buildSafeTextRow(illuminationSafety == 1 ? "明火安全" : "明火警告", illuminationSafety),
           const SizedBox(height: 5),
           _buildSafeTextRow(waterLevelSafety == 1 ? "水位安全" : "水位警告", waterLevelSafety),
         ],
       ),
+    );
+  }
+
+  //上下限设置ui
+  Widget _buildRougeSliver(Icon icon, String tips) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        icon,
+        SizedBox(
+          width: 350,
+          child: SfRangeSlider(
+            values: tips == 'light' ? _lightValues : _waterValues,
+            min: 0,
+            max: 150,
+            interval: 30,
+            showLabels: true,
+            showTicks: true,
+            enableTooltip: true,
+            enableIntervalSelection: true,
+            minorTicksPerInterval: 1,
+            onChanged: (SfRangeValues value) {
+              setState(() {
+                tips == 'light' ? _lightValues = value : _waterValues = value;
+              });
+              if (isConnected) {
+                tips == 'light'
+                    ? sendToPeer('$tips:${_lightValues.start.toInt()},${_lightValues.end.toInt()}\r\n')
+                    : sendToPeer('$tips:${_waterValues.start.toInt()},${_waterValues.end.toInt()}\r\n');
+              }
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -241,7 +300,13 @@ class _MyHomePageState extends State<MyHomePage> {
           },
         ),
       ),
-      ElevatedButton(onPressed: isConnected && isCanSend ? sendToPeer : null, child: const Text("发送信息")),
+      ElevatedButton(
+          onPressed: isConnected && isCanSend
+              ? () {
+                  sendToPeer(sendData);
+                }
+              : null,
+          child: const Text("发送信息")),
     ]);
   }
 }
