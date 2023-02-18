@@ -67,7 +67,7 @@ class _MyHomePageState extends State<MyHomePage> {
   int illumination = 0;
   int waterLevelSafety = 1;
   int illuminationSafety = 1;
-
+  int bulb = 0;
   //rangeSliver的默认值
   SfRangeValues _lightValues = const SfRangeValues(30.0, 60.0);
   SfRangeValues _waterValues = const SfRangeValues(60.0, 90.0);
@@ -93,6 +93,7 @@ class _MyHomePageState extends State<MyHomePage> {
           waterLevel = int.parse(receivedData.split(',')[1]);
           illuminationSafety = int.parse(receivedData.split(',')[2]);
           waterLevelSafety = int.parse(receivedData.split(',')[3]);
+          bulb = int.parse(receivedData.split(',')[4]);
         }
       });
     });
@@ -131,7 +132,7 @@ class _MyHomePageState extends State<MyHomePage> {
           ElevatedButton(
               onPressed: !isConnected ? tcpConnect : tcpCloseConnect,
               child: !isConnected ? const Text('建立连接') : const Text('断开连接')),
-          const SizedBox(height: 10),
+
           _buildRougeSliver(const Icon(Icons.sunny, color: Colors.orange), 'light'),
           // const SizedBox(height: 5),
           _buildRougeSliver(const Icon(Icons.water_sharp, color: Colors.blueAccent), 'water'),
@@ -144,18 +145,28 @@ class _MyHomePageState extends State<MyHomePage> {
               _buildTextRow("水位：", Icons.water_sharp, Colors.blueAccent, waterLevel, ' m'),
             ],
           ),
-          const SizedBox(height: 20),
-          ElevatedButton.icon(
-            onPressed: isConnected && isCanSend
-                ? () {
-                    sendToPeer('F\r\n');
-                  }
-                : null,
-            label: const Text("灭火"),
-            icon: const Icon(Icons.fire_extinguisher),
+
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.wb_incandescent,
+                color: bulb == 1 ? Colors.red : Colors.black,
+              ),
+              const SizedBox(width: 20),
+              ElevatedButton.icon(
+                onPressed: isConnected && isCanSend
+                    ? () {
+                        sendToPeer('F\r\n');
+                      }
+                    : null,
+                label: const Text("灭火"),
+                icon: const Icon(Icons.fire_extinguisher),
+              ),
+            ],
           ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 10),
           Joystick(
             stick: const MyJoystickStick(),
             base: const JoystickBase(),
@@ -172,9 +183,8 @@ class _MyHomePageState extends State<MyHomePage> {
             },
             mode: JoystickMode.all,
           ),
-          const SizedBox(height: 30),
+          const SizedBox(height: 10),
           _buildSafeTextRow(illuminationSafety == 1 ? "明火安全" : "明火警告", illuminationSafety),
-          const SizedBox(height: 5),
           _buildSafeTextRow(waterLevelSafety == 1 ? "水位安全" : "水位警告", waterLevelSafety),
         ],
       ),
@@ -188,7 +198,7 @@ class _MyHomePageState extends State<MyHomePage> {
       children: [
         icon,
         SizedBox(
-          width: 350,
+          width: 300,
           child: SfRangeSlider(
             values: tips == 'light' ? _lightValues : _waterValues,
             min: 0,
