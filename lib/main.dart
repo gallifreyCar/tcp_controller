@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_joystick/flutter_joystick.dart';
 import 'package:syncfusion_flutter_sliders/sliders.dart';
 
+import 'my_joysticks_stick.dart';
+
 void main() {
   runApp(const MyApp());
 }
@@ -122,21 +124,15 @@ class _MyHomePageState extends State<MyHomePage> {
     return Scaffold(
       resizeToAvoidBottomInset: false,
       appBar: AppBar(
-        title: const Text("TCP控制器"),
+        title: const Text("灭火小车TCP控制器"),
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          _buildInputField(),
-          const SizedBox(height: 10),
-          ElevatedButton(
-              onPressed: !isConnected ? tcpConnect : tcpCloseConnect,
-              child: !isConnected ? const Text('建立连接') : const Text('断开连接')),
-
+          _buildLinkedArea(),
           _buildRougeSliver(const Icon(Icons.sunny, color: Colors.orange), 'light'),
-          // const SizedBox(height: 5),
           _buildRougeSliver(const Icon(Icons.water_sharp, color: Colors.blueAccent), 'water'),
-          const SizedBox(height: 30),
+          const SizedBox(height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -145,49 +141,58 @@ class _MyHomePageState extends State<MyHomePage> {
               _buildTextRow("水位：", Icons.water_sharp, Colors.blueAccent, waterLevel, ' m'),
             ],
           ),
-
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.wb_incandescent,
-                color: bulb == 1 ? Colors.red : Colors.black,
-              ),
-              const SizedBox(width: 20),
-              ElevatedButton.icon(
-                onPressed: isConnected && isCanSend
-                    ? () {
-                        sendToPeer('F\r\n');
-                      }
-                    : null,
-                label: const Text("灭火"),
-                icon: const Icon(Icons.fire_extinguisher),
-              ),
-            ],
-          ),
-
           const SizedBox(height: 10),
-          Joystick(
-            stick: const MyJoystickStick(),
-            base: const JoystickBase(),
-            listener: (move) {
-              x = (move.x * 100).toInt();
-              y = (move.y * 100).toInt();
-              setState(() {
-                sendData = "X: $x,Y: $y\r\n";
-              });
-              // print(sendData);
-              if (isConnected) {
-                sendToPeer(sendData);
-              }
-            },
-            mode: JoystickMode.all,
-          ),
+          _outFire(),
+          const SizedBox(height: 20),
+          _buildJoyStick(),
           const SizedBox(height: 10),
           _buildSafeTextRow(illuminationSafety == 1 ? "明火安全" : "明火警告", illuminationSafety),
           _buildSafeTextRow(waterLevelSafety == 1 ? "水位安全" : "水位警告", waterLevelSafety),
         ],
       ),
+    );
+  }
+
+  //灭火ui
+  Widget _outFire() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(
+          Icons.wb_incandescent,
+          color: bulb == 1 ? Colors.red : Colors.black,
+        ),
+        const SizedBox(width: 20),
+        ElevatedButton.icon(
+          onPressed: isConnected && isCanSend
+              ? () {
+                  sendToPeer('F\r\n');
+                }
+              : null,
+          label: const Text("灭火"),
+          icon: const Icon(Icons.fire_extinguisher),
+        ),
+      ],
+    );
+  }
+
+  //控制器ui
+  Widget _buildJoyStick() {
+    return Joystick(
+      stick: const MyJoystickStick(),
+      base: const JoystickBase(),
+      listener: (move) {
+        x = (move.x * 100).toInt();
+        y = (move.y * 100).toInt();
+        setState(() {
+          sendData = "X: $x,Y: $y\r\n";
+        });
+        // print(sendData);
+        if (isConnected) {
+          sendToPeer(sendData);
+        }
+      },
+      mode: JoystickMode.all,
     );
   }
 
@@ -225,35 +230,43 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  //输入框ui
-  Widget _buildInputField() {
-    return SizedBox(
-      width: 200,
-      child: Column(
-        children: [
-          TextField(
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: "主机地址",
-              hintText: "例：192.168.0.251",
-            ),
-            onChanged: (e) => {
-              setState(() {
-                host = e;
-              })
-            },
+  //连接模块ui
+  Widget _buildLinkedArea() {
+    return Column(
+      children: [
+        SizedBox(
+          width: 200,
+          child: Column(
+            children: [
+              TextField(
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: "主机地址",
+                  hintText: "例：192.168.0.251",
+                ),
+                onChanged: (e) => {
+                  setState(() {
+                    host = e;
+                  })
+                },
+              ),
+              TextField(
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: "端口", hintText: "例：1234"),
+                onChanged: (e) => {
+                  setState(() {
+                    port = int.parse(e);
+                  })
+                },
+              ),
+            ],
           ),
-          TextField(
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(labelText: "端口", hintText: "例：1234"),
-            onChanged: (e) => {
-              setState(() {
-                port = int.parse(e);
-              })
-            },
-          ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 10),
+        ElevatedButton(
+            onPressed: !isConnected ? tcpConnect : tcpCloseConnect,
+            child: !isConnected ? const Text('建立连接') : const Text('断开连接')),
+      ],
     );
   }
 
@@ -295,7 +308,7 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  //测试用的自由发送信息模块（保留
+  //测试用的自由发送信息模块ui（保留
   Widget _buildTestContent() {
     return Column(children: [
       Container(
@@ -318,29 +331,5 @@ class _MyHomePageState extends State<MyHomePage> {
               : null,
           child: const Text("发送信息")),
     ]);
-  }
-}
-
-//摇杆样式
-class MyJoystickStick extends StatelessWidget {
-  const MyJoystickStick({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 50,
-      height: 50,
-      decoration: const BoxDecoration(
-        shape: BoxShape.circle,
-        color: Colors.blueAccent,
-        boxShadow: [
-          BoxShadow(color: Colors.blueGrey, offset: Offset(2.0, 2.0), blurRadius: 5.0),
-        ],
-      ),
-      child: const Icon(
-        Icons.gps_fixed_outlined,
-        color: Colors.white70,
-      ),
-    );
   }
 }

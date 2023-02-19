@@ -63,7 +63,7 @@ packages:
     source: sdk
     version: "0.0.0"
   flutter_joystick:
-    dependency: "direct dev"
+    dependency: "direct main"
     description:
       name: flutter_joystick
       url: "https://pub.flutter-io.cn"
@@ -164,7 +164,7 @@ packages:
     source: hosted
     version: "20.4.50"
   syncfusion_flutter_sliders:
-    dependency: "direct dev"
+    dependency: "direct main"
     description:
       name: syncfusion_flutter_sliders
       url: "https://pub.flutter-io.cn"
