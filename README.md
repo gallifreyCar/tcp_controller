@@ -1,6 +1,6 @@
 # tcp_controller
 
-A new Flutter Controller project base on tcp.
+A fire extinguishing trolley controller flutter app based on tcp server
 
 ## Getting Started
 
@@ -16,4 +16,4 @@ For help getting started with Flutter development, view the
 samples, guidance on mobile development, and a full API reference.
 
 ## test
-可以参照test包里面的python基本进行基于socket的tcp连接进行测试
+You can refer to the python script in the package`test` to test tcp connection base on socket
