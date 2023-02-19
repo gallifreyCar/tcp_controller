@@ -15,5 +15,8 @@ For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
 
-## test
+## Test
 You can refer to the python script in the package`test` to test tcp connection base on socket
+
+## Thinks
+Thanks for [Liplum](https://github.com/liplum)'s help
